@@ -7,6 +7,7 @@ import morgan from "morgan";
 import postRoutes from "./routes/postRoutes.js";
 import openAiRoutes from "./routes/openAiRoutes.js";
 import { verifyToken } from "./middleware/auth.js";
+import connectDB from "./models/connect.js";
 
 dotenv.config();
 
@@ -27,9 +28,13 @@ app.get("/", async (req, res) => {
   });
 });
 
+/* MONGOOSE SETUP */
+const PORT = process.env.PORT || 9000;
+
 const startServer = async () => {
   try {
-    app.listen(8080, () => console.log("Server started on port 8080"));
+    await connectDB(process.env.MONGODB_URL);
+    app.listen(PORT, () => console.log("Server started on port 8080"));
   } catch (error) {
     console.log(error);
   }
