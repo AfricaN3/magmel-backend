@@ -42,7 +42,7 @@ const chat = new ChatOpenAI({
 export const generateImage = async (req, res) => {
   try {
     const { prompt } = req.body;
-    const sanitizedPrompt = prompt.trim().replaceAll("\n", " ");
+    const sanitizedPrompt = prompt.trim().replace(/\n/g, " ");
     // ensure prompt is valid
     // You can replace this with different model API's
     const URL = `https://api-inference.huggingface.co/models/prompthero/openjourney`;
@@ -81,8 +81,10 @@ export const generateImage = async (req, res) => {
 export const generatePrompt = async (req, res) => {
   try {
     const { prompt } = req.body;
+    console.log(prompt);
 
-    const sanitizedPrompt = prompt.trim().replaceAll("\n", " ");
+    const sanitizedPrompt = prompt.trim().replace(/\n/g, " ");
+    console.log(sanitizedPrompt);
 
     const translationPrompt = ChatPromptTemplate.fromPromptMessages([
       SystemMessagePromptTemplate.fromTemplate(
@@ -113,7 +115,7 @@ export const summarizePrompt = async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    const sanitizedPrompt = prompt.trim().replaceAll("\n", " ");
+    const sanitizedPrompt = prompt.trim().replace(/\n/g, " ");
 
     const translationPrompt = ChatPromptTemplate.fromPromptMessages([
       SystemMessagePromptTemplate.fromTemplate(
