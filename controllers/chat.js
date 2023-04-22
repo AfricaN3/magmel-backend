@@ -12,8 +12,6 @@ export async function chatWithFile(req, res) {
   const { question, history } = req.body;
   const { fileId } = req.params;
 
-  console.log("question", question);
-
   if (!question) {
     return res.status(400).json({ message: "No question in the request" });
   }
