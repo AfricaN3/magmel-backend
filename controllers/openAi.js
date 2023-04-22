@@ -1,15 +1,19 @@
 import * as dotenv from "dotenv";
-import { Configuration, OpenAIApi } from "openai";
+import { ChatOpenAI } from "langchain/chat_models/openai";
+import {
+  SystemMessagePromptTemplate,
+  HumanMessagePromptTemplate,
+  ChatPromptTemplate,
+} from "langchain/prompts";
 import { Buffer } from "buffer";
 import axios from "axios";
 
 dotenv.config();
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+const chat = new ChatOpenAI({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  temperature: 0,
 });
-
-const openai = new OpenAIApi(configuration);
 
 /* GENERATE IMAGE */
 
@@ -38,9 +42,11 @@ const openai = new OpenAIApi(configuration);
 export const generateImage = async (req, res) => {
   try {
     const { prompt } = req.body;
+    const sanitizedPrompt = prompt.trim().replaceAll("\n", " ");
+    // ensure prompt is valid
     // You can replace this with different model API's
     const URL = `https://api-inference.huggingface.co/models/prompthero/openjourney`;
-    const styledPrompts = `mdjrny-v4 style ${prompt}`;
+    const styledPrompts = `mdjrny-v4 style ${sanitizedPrompt}`;
 
     // Send the request
     const response = await axios({
@@ -76,41 +82,29 @@ export const generatePrompt = async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    const aiResponse = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a prompt generator for Midjourney's artificial intelligence program. Your job is to provide detailed and creative descriptions that will inspire unique and interesting images from the AI. Keep in mind that the AI is capable of understanding a wide range of language and can interpret abstract concepts, so feel free to be as imaginative and descriptive as possible. The prompt must not exceed thirty words. For example, you could describe a scene from a futuristic city, or a surreal landscape filld with strange creatures. The more detailed and imaginative your description, the more interesting the resulting image will be.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
+    const sanitizedPrompt = prompt.trim().replaceAll("\n", " ");
 
-    const completions = aiResponse.data.choices[0].message.content;
-    const finishReason = aiResponse.data.choices[0].finish_reason;
-    if (finishReason === "stop") {
-      res.status(200).json({ generated: completions });
-    } else if (finishReason === "length") {
-      res
-        .status(400)
-        .send(
-          "Incomplete model output due to max_tokens parameter or token limit"
-        );
-    } else if (finishReason === "content_filter") {
-      res
-        .status(400)
-        .send("Omitted content due to a flag from our content filters");
-    } else {
-      res.status(400).send("API response is incomplete");
-    }
+    const translationPrompt = ChatPromptTemplate.fromPromptMessages([
+      SystemMessagePromptTemplate.fromTemplate(
+        "You are a prompt generator for Midjourney's artificial intelligence program. Your job is to transform texts submitted by users to prompts that will provide detailed and creative descriptions that will inspire unique and interesting images from the AI. Keep in mind that the AI is capable of understanding a wide range of language and can interpret abstract concepts, so feel free to be as imaginative and descriptive as possible. The prompt generated must not exceed forty words. For example, a user text which states: An astronaut riding a horse on the moon can be transformed to the prompt: 'The astronaut and his horse trot across the barren lunar landscape, their long shadows stretching out before them as the Earth looms large in the star-filled sky above'. You could describe a scene from a futuristic city, or a surreal landscape filled with strange creatures. The more detailed and imaginative your description, the more interesting the resulting image will be."
+      ),
+      HumanMessagePromptTemplate.fromTemplate("{text}"),
+    ]);
+
+    const responseA = await chat.generatePrompt([
+      await translationPrompt.formatPromptValue({
+        text: sanitizedPrompt,
+      }),
+    ]);
+
+    const completions = responseA.generations[0][0].text;
+
+    // ensure prompt is valid
+
+    res.status(200).json({ generated: completions });
   } catch (error) {
     console.error(error);
-    res.status(500).send(error?.response.statusText || "Something went wrong");
+    res.status(500).send(error?.response?.statusText || "Something went wrong");
   }
 };
 
@@ -119,40 +113,28 @@ export const summarizePrompt = async (req, res) => {
   try {
     const { prompt } = req.body;
 
-    const aiResponse = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a prompt generator for Midjourney's artificial intelligence program. Your job is to summarize the input provided by the user and provide detailed and concise descriptions that will inspire unique and interesting images from the AI. Keep in mind that the AI is capable of understanding a wide range of language and can interpret abstract concepts, so feel free to be as concise and descriptive as possible. The prompt must not exceed thirty words. The more detailed and concise your description from the input, the more interesting the resulting image will be.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
+    const sanitizedPrompt = prompt.trim().replaceAll("\n", " ");
 
-    const completions = aiResponse.data.choices[0].message.content;
-    const finishReason = aiResponse.data.choices[0].finish_reason;
-    if (finishReason === "stop") {
-      res.status(200).json({ generated: completions });
-    } else if (finishReason === "length") {
-      res
-        .status(400)
-        .send(
-          "Incomplete model output due to max_tokens parameter or token limit"
-        );
-    } else if (finishReason === "content_filter") {
-      res
-        .status(400)
-        .send("Omitted content due to a flag from our content filters");
-    } else {
-      res.status(400).send("API response still in progress or incomplete");
-    }
+    const translationPrompt = ChatPromptTemplate.fromPromptMessages([
+      SystemMessagePromptTemplate.fromTemplate(
+        "You are a prompt generator for Midjourney's artificial intelligence program. Your job is to summarize the input provided by the user which should provide a detailed and concise descriptions that will inspire unique and interesting images from the AI. Keep in mind that the AI is capable of understanding a wide range of language and can interpret abstract concepts, so feel free to be as concise and descriptive as possible. The prompt must not exceed forty words. The more detailed and concise your description from the input, the more interesting the resulting image will be."
+      ),
+      HumanMessagePromptTemplate.fromTemplate("{text}"),
+    ]);
+
+    const responseA = await chat.generatePrompt([
+      await translationPrompt.formatPromptValue({
+        text: sanitizedPrompt,
+      }),
+    ]);
+
+    const completions = responseA.generations[0][0].text;
+
+    // ensure prompt is valid
+
+    res.status(200).json({ generated: completions });
   } catch (error) {
     console.error(error);
-    res.status(500).send(error?.response.statusText || "Something went wrong");
+    res.status(500).send(error?.response?.statusText || "Something went wrong");
   }
 };

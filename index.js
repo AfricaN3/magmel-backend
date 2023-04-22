@@ -6,6 +6,8 @@ import morgan from "morgan";
 
 import postRoutes from "./routes/postRoutes.js";
 import openAiRoutes from "./routes/openAiRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 import { verifyToken } from "./middleware/auth.js";
 import connectDB from "./models/connect.js";
 
@@ -21,6 +23,8 @@ app.use(cors());
 
 app.use("/api/v1/post", verifyToken, postRoutes);
 app.use("/api/v1/ai", verifyToken, openAiRoutes);
+app.use("/api/v1/chat", verifyToken, chatRoutes);
+app.use("/api/v1/stats", statsRoutes);
 
 app.get("/", async (req, res) => {
   res.status(200).json({
@@ -34,7 +38,7 @@ const PORT = process.env.PORT || 9000;
 const startServer = async () => {
   try {
     await connectDB(process.env.MONGODB_URL);
-    app.listen(PORT, () => console.log("Server started on port 8080"));
+    app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
   } catch (error) {
     console.log(error);
   }

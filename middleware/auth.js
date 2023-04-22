@@ -1,5 +1,6 @@
 import { wallet, u } from "@cityofzion/neon-core";
 import isValidToken from "../utils/isValidToken.js";
+import User from "../models/users.js";
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -42,6 +43,36 @@ export const verifyToken = async (req, res, next) => {
     next();
   } catch (err) {
     console.log(err);
+    res.status(500).json(`${err.message || "Server error!!!"}`);
+  }
+};
+
+export const getOrCreateUser = async (req, res, next) => {
+  try {
+    const owner = req.body.owner || req.params.owner;
+
+    if (!owner || !wallet.isAddress(owner)) {
+      return res.status(401).send("Invalid Request");
+    }
+
+    if (!!owner && wallet.isAddress(owner)) {
+      const userExist = await User.exists({ address: owner });
+
+      let savedUser;
+
+      if (!!userExist) {
+        savedUser = await User.findById(userExist._id);
+      } else {
+        const newUser = new User({
+          address: owner,
+        });
+        savedUser = await newUser.save();
+      }
+
+      res.user = savedUser;
+      next();
+    }
+  } catch (err) {
     res.status(500).json(`${err.message || "Server error!!!"}`);
   }
 };
