@@ -81,10 +81,8 @@ export const generateImage = async (req, res) => {
 export const generatePrompt = async (req, res) => {
   try {
     const { prompt } = req.body;
-    console.log(prompt);
 
     const sanitizedPrompt = prompt.trim().replace(/\n/g, " ");
-    console.log(sanitizedPrompt);
 
     const translationPrompt = ChatPromptTemplate.fromPromptMessages([
       SystemMessagePromptTemplate.fromTemplate(
