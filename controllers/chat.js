@@ -2,6 +2,7 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { makeChain } from "../utils/makeChain.js";
 import { pinecone } from "../utils/pinecone.js";
+import openai from "../utils/openAi.js";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -19,6 +20,16 @@ export async function chatWithFile(req, res) {
   const sanitizedQuestion = question.trim().replace(/\n/g, " ");
 
   try {
+    const moderationResponse = await openai.createModeration({
+      input: sanitizedQuestion,
+    });
+
+    const [results] = moderationResponse.data.results;
+
+    if (results.flagged) {
+      return res.status(401).send("Flagged Content");
+    }
+
     const index = pinecone.Index(PINECONE_INDEX_NAME);
 
     /* create vectorstore*/
